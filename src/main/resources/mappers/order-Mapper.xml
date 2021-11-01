@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mybatis mapper 파일임을 명시하기 위한 DTD 선언문 (반드시 작성한다.) -->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+
+	# Mapper 속성
+
+	* namespace속성 : mapper의 식별자이며 중복 없이 고유해야 한다.
+    
+    * id속성        : query의 식별자이며 중복 없이 고유해야 한다.
+                      namespace와 id속성을 연결시켜 dao에서 호출한다.
+                      
+                      Ex)
+                      	namespace = goods
+                      		id = goodsList    > goods.goodsList
+                      		id = insertGoods  > goods.insertGoods
+                      		id = deleteGoods  > goods.deleteGoods
+
+						namespace = member
+							id = memberList	  > member.memberList
+							id = addMember	  > member.addMember
+							id = modifyMember > member.modifyMember
+
+	* resultType속성 : 반환되는 데이터의 타입을 명시하며 반환데이터가 있는 select쿼리문에서 사용한다.
+						int , String , Map , ~dto
+					   
+					   dto타입은 mybatis-config.xml파일에서 alias(별칭)지정을 하여 간략하게 사용할 수 있다.
+						
+	* resultMap속성  : 주로 반환되는 데이터의 컬럼명을 pojo변수와 일치시키거나 map 컬렉션프레임워크의 키값으로 등록시키기 위하여 사용한다.
+ 
+ 	* parameterType속성 : dao에서 쿼리문으로 전달되는 파라미터의 타입을 명시하며 , 생략가능하다. 
+ 	
+ -->
+ 
+ <mapper namespace="order">
+ 	
+ 	<select id="selectAll" resultType="OrderDto">
+ 		SELECT
+ 				*
+ 		FROM
+ 				T_ORDER_LIST
+ 	</select>
+ 	
+ 	<select id="select1" resultType="int">
+ 		SELECT
+ 				COUNT(*)
+ 		FROM
+ 				T_ORDER_LIST
+ 	</select>
+ 	
+ 	<select id="select2" resultType="OrderDto">
+ 		
+ 		<!--  
+	
+		 	 <![CDATA[]]> 는 SQL 내부에 연산자가 있을 경우 사용한다. ( '>' '<' 연산자가 태그와 혼동되기 때문 )
+		
+		 	- 쿼리 내부에 연산자가 없어도 코드의 통일성을 주기 위해 <![CDATA[]]>를 사용하기도 한다. 
+			
+		-->
+ 		
+ 		<![CDATA[
+	 		SELECT
+	 				*
+	 		FROM
+	 				T_ORDER_LIST
+	 		WHERE
+	 				TOTAL_PRICE > 50000
+ 		]]>
+ 	</select>
+ 	
+ 	<!-- 
+
+		# Table의 Column을 자바로 매핑하는 방법
+	
+		- POJO의 변수명과 Table의 컬럼명이 일치할경우는 ( 두단어가 이어지는 경우가 없을때 ) 
+		  스프링 프레임워크에서 테이블명과 POJO의 변수를 연결하여 준다.
+		  
+		- 일반적으로 POJO의 변수는 CamelCase를 사용하고 테이블의 변수는 SnakeCase 사용하여 
+		  두 값이 일치하지 않는 경우는 추가적으로 연결하는 코드를 추가적으로 구현하여야 한다. 
+	
+			[ 예시 ]
+			
+			   [POJO]	   	   [Table Colume]
+			productCode	  <>	PRODUCT_CODE
+			productName	  <>    PRODUCT_NAME
+	
+		- 연결방법
+			
+			예시 1) mybatis-config파일에 _와 camelCase를 매핑하는 설정을 추가한다.
+		
+				<settings>
+					<setting name="mapUnderscoreToCamelCase" value="true"/>
+				</settings>
+	
+	
+			예시 2) resultMap태그를 추가로 작성한다.
+		
+				<resultMap id="getProduct" type="000.000.000.Product">  		<< 식별id	, POJO클래스 전체 경로
+		       		<result property="productCode" column="PRODUCT_CODE"/>		<< 변수값   , 컬럼명
+		       		<result property="productName" column="PRODUCT_NAME"/>
+		    	</resultMap>
+		    	
+		    	<select id = ""  resultType="getProduct">						<< 식별id , resultMap의 id
+		    		SELECT
+						PRODUCT_CODE
+						PRODUCT_NAME
+					FROM
+						PRODUCT		
+		    	</select>
+		
+				> resultType은 resultMap의 id와 매핑된다.
+			
+		
+			예시 3) 쿼리문에서 as키워드를 작성하여 pojo의 colume과 연결하거나 맵의 key값으로 매핑한다.
+			
+				<select id = "" >
+					SELECT
+						PRODUCT_CODE  AS productCode
+						PRODUCT_NAME  AS productName
+						PRODUCT_PRICE    productPrice    < AS 키워드는 생략가능하다.
+					FROM
+						PRODUCT		
+				</select>
+	
+ 		-->
+ 	
+ 	<resultMap type="map" id="orderInfo">
+ 		<result column="MEMBER_ID"      property="memberId"/>
+ 		<result column="ORDER_ID"       property="orderId" />
+ 		<result column="PRODUCT_CODE"   property="productCode" />
+ 		<result column="PRODUCT_NAME"   property="productName" />
+ 		<result column="PRODUCT_PRICE"  property="productPrice" />
+ 		<result column="TAX"  			property="tax" />
+ 		<result column="AFTER_TAX"  	property="afterTax" />
+ 		<result column="ORDER_COUNT"  	property="orderCount" />
+ 		<result column="ORDER_DATE"  	property="orderDate" />
+ 		<result column="IMAGE_NAME"  	property="imageName" />
+ 		<result column="IMAGE_TYPE"  	property="imageType" />
+ 		<result column="FILE_SIZE"  	property="fileSize" />
+ 	</resultMap>
+ 	
+ 	<select id="select3" resultMap="orderInfo">
+		 SELECT
+				O.MEMBER_ID								  AS MEMBER_ID,
+				O.ORDER_ID								  AS ORDER_ID,
+				O.PRODUCT_CODE							  AS PRODUCT_CODE,
+				O.PRODUCT_NAME							  AS PRODUCT_NAME,
+				O.PRODUCT_PRICE							  AS PRODUCT_PRICE,
+				O.PRODUCT_PRICE * 0.1                     AS TAX,
+				O.PRODUCT_PRICE + (O.PRODUCT_PRICE * 0.1) AS AFTER_TAX,
+		        O.ORDER_COUNT							  AS ORDER_COUNT,
+		        O.TOTAL_PRICE							  AS TOTAL_PRICE,
+		        O.ORDER_DATE							  AS ORDER_DATE,
+		        P.IMAGE_NAME							  AS IMAGE_NAME,
+		        P.IMAGE_TYPE							  AS IMAGE_TYPE,
+		        P.FILE_SIZE							  	  AS FILE_SIZE
+		FROM
+				T_ORDER_LIST O,
+		        T_PRODUCT_IMAGE P
+		WHERE 
+				O.PRODUCT_CODE = P.PRODUCT_CODE
+
+ 	</select>	
+ 
+ 
+ 	<select id="select4" resultType="map">
+ 		SELECT
+				O.MEMBER_ID								  AS memberId,
+				O.ORDER_ID								  AS orderId,
+				O.PRODUCT_CODE							  AS productCode,
+				O.PRODUCT_NAME							  AS productName,
+				O.PRODUCT_PRICE							  AS productPrice,
+				O.PRODUCT_PRICE * 0.1                     AS tax,
+				O.PRODUCT_PRICE + (O.PRODUCT_PRICE * 0.1) AS afterTax,
+		        O.ORDER_COUNT							  AS orderCount,
+		        O.TOTAL_PRICE							  AS totalPrice,
+		        O.ORDER_DATE							  AS orderDate,
+		        P.IMAGE_NAME							  AS imageName,
+		        P.IMAGE_TYPE							  AS imageType,
+		        P.FILE_SIZE							  	  AS fileSize
+		FROM
+				T_ORDER_LIST O,
+		        T_PRODUCT_IMAGE P
+		WHERE 
+				O.PRODUCT_CODE = P.PRODUCT_CODE
+ 	
+ 	</select>
+ 
+ 	<!-- 		
+		
+	  	# Dao에서 mapper로 파라메타 전달 
+	  	
+		- 전달 받은 데이터를 쿼리문에서 ${변수}  , #{변수}과 같은 형태로 사용된다.
+		- 주로 #{변수} 형태(preparedStatement)를 사용하며 이 형태를 권장한다.
+		- 대소문자가 구분되므로 오타에 주의한다.
+	
+	-->
+	<insert id="insertSingleData" parameterType="String">
+	
+		INSERT INTO T_ORDER_LIST (
+				MEMBER_ID
+		) VALUES (
+				#{memberId}
+		)
+	
+	</insert>
+	
+	<insert id="insertDto" parameterType="OrderDto">
+	
+		INSERT INTO T_ORDER_LIST (
+				MEMBER_ID,
+				PRODUCT_CODE,
+				PRODUCT_NAME
+		) VALUES (
+				#{memberId},
+				#{productCode},
+				#{productName}
+		)
+	
+	</insert>
+	
+	<insert id="insertMap" parameterType="map">
+		
+		INSERT INTO T_ORDER_LIST (
+				MEMBER_ID,
+				PRODUCT_CODE,
+				PRODUCT_NAME
+		) VALUES (
+				#{memberId},
+				#{productCode},
+				#{productName}
+		)
+	
+	</insert>
+ 
+ </mapper>

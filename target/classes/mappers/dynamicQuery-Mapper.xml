@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="dynamicQuery">
+	
+	<!--  
+		
+		# 동적 SQL
+
+		- 마이바티스의 가장 강력한 기능 중 하나는 동적 SQL을 처리하는 방법이다. 
+		- JSTL과 같이 <if> <when> <otherwise>를 사용하여 쿼리를 동적으로 사용할 수 있다. 
+		- 공백이나 콤마를 붙이는 작업 , 제어문에 따라서 AND절과 OR절을 제어하기가 까다로울 수 있는데
+	      마이바티스의 <trim> , <where> , <set>을 사용하여 보다 편리하게 구현할 수 있다.
+	      
+		- '' , "" 모두 사용 가능하다. test 조건식은 '' ,  문자열 비교는 ""를 권장한다.  
+			
+			예시) 
+				<when test = '조건식'>
+				<when test = "조건식" > 
+				
+		- dao에서 전송된 단일 데이터 , pojo의 필드 , map프레임워크의 key값을 그대로 속성에 사용한다.
+			예시)
+			<if test='productCode != null '>
+			<if test='onePageViewCount != 0'>  
+			
+		- (자주 실수하는 부분1) 조건식에서 연산자 사용시 && || 대신에 and , or 를 사용해야 한다.
+		- (자주 실수하는 부분2) JSTL과 구문이 굉장히 비슷하여 JSTL형태로 Mybatis에서 작성하는 경우
+
+
+			예시)
+				       			 JSTL				    MyBatis 
+			표기법 		:    	${}				/	     #{}
+			if    		:  		<c:if>			/		 <if>
+			choose		:  		<c:choose>  	/	   <choose>
+			when		: 		<c:when>	 	/ 		 <when>
+			otherwise 	: 		<c:otherwise> 	/ 	   <otherwise>		
+			foreach		:		<c:forEach>		/	 	<foreach>
+	
+	-->
+	
+	<insert id="ifEx" parameterType="OrderDto">
+		
+		INSERT INTO T_ORDER_LIST (
+				PRODUCT_CODE,
+				PRODUCT_NAME,
+				PRODUCT_PRICE,
+				ORDER_COUNT,
+				TOTAL_PRICE
+		)
+		VALUES
+				<if test='productCode == null'>
+					("invalid",
+					"invalid",
+					-1,
+					-1,
+					-1)
+				</if>
+				<if test='productCode != null'>
+				 	(#{productCode},
+				 	#{productName},
+				 	#{productPrice},
+				 	#{orderCount},
+				 	#{totalPrice})
+				</if>
+				
+	</insert>
+	
+	<insert id="chooseEx" parameterType="OrderDto">
+		INSERT INTO T_ORDER_LIST (
+				PRODUCT_CODE,
+				PRODUCT_NAME,
+				PRODUCT_PRICE,
+				ORDER_COUNT,
+				TOTAL_PRICE
+		)
+		VALUES (
+				#{productCode},
+				<choose>
+					<when test='productCode == "0x001"'>"기계식키보드"</when>
+					<when test='productCode == "0x002"'>"무소음마우스"</when>
+					<when test='productCode == "0x003"'>"장패드"</when>
+					<otherwise>"등록되지않은상품"</otherwise>
+				</choose>,
+				<choose>
+					<when test='productCode.equals("0x001")'>37000</when>
+					<when test='productCode.equals("0x002")'>24000</when>
+					<when test='productCode.equals("0x003")'>7000</when>
+					<otherwise>-1</otherwise>
+				</choose>,
+				#{orderCount},
+				<choose>
+					<when test="productCode == '0x001'">37000 * #{orderCount}</when>
+					<when test="productCode == '0x002'">24000 * #{orderCount}</when>
+					<when test="productCode == '0x003'">7000 * #{orderCount}</when>
+					<otherwise>-1</otherwise>
+				</choose>
+		)
+	</insert>
+	
+	<!-- 
+		
+		# foreach
+		
+		- 목록형 데이터로 SQL문을 만들때 사용한다.
+		- 속성
+		
+			    item="항목"			: 한 개의 항목을 가리키는 변수 이름 지정
+			    collection="목록"	: java.util.List 구현체나 배열 객체 지정
+			    index="인덱스"      : 인덱스 값을 꺼낼때 사용할 변수 이름 지정
+			    separator="구분자"   : 구분자 문자열 지정
+			    
+			    open="시작문자열"   : 최종 반환값의 접두어 지정   (IN(값, 값, ...) 조건을 만들때 편리하다.)
+			    close="종료문자열"	: 최종 반환값의 접미어 지정
+				
+	-->
+	<insert id="foreachEx">
+	
+		INSERT INTO
+				T_ORDER_LIST
+		VALUES
+			<foreach collection="list" item="odto" separator=",">
+			(
+				#{odto.memberId},
+				#{odto.orderId},
+				#{odto.productCode},
+				#{odto.productName},
+				#{odto.productPrice},
+				#{odto.orderCount},
+				#{odto.totalPrice},
+				now()
+			) 
+			</foreach>
+	
+	</insert>
+	
+	<!-- 
+	
+		# <where>
+	
+		- <where>는 단독으로 사용되지 않고<if>, <choose>와 같은 태그들을 내포하여 SQL들을 연결하여 준다.
+		- 앞 뒤에 필요한 구문들(AND, OR, WHEHRE)을 추가하거나 생략하는 역할을 한다.
+	
+	 -->
+	<select id="whereEx" parameterType="OrderDto" resultType="OrderDto">
+		<!--  
+		SELECT
+				*
+		FROM
+				T_ORDER_LIST
+		WHERE
+				<if test='memberId != null'>
+					MEMBER_ID = #{memberId}
+				</if>
+				<if test='orderId != null'>
+					AND ORDER_ID = #{orderId}
+				</if>
+		-->
+		
+		SELECT
+				*
+		FROM
+				T_ORDER_LIST
+		<where>
+				<if test='memberId != null'>
+					MEMBER_ID = #{memberId}
+				</if>
+				<if test='orderId != null'>
+					AND ORDER_ID = #{orderId}
+				</if>
+		</where>
+		
+	</select>
+	
+	<!-- 
+			
+		# set
+	
+		- <set>은 단독으로 사용되지 않고<if>, <choose>와 같은 태그들을 내포하여 SQL들을 연결하여 준다.
+		- 앞 뒤에 필요없는 구문(,)을 생략하여 준다.
+	
+	 -->
+	<update id="setEx" parameterType="OrderDto">
+
+		UPDATE
+				T_ORDER_LIST
+		SET
+				<if test='productCode != null and productCode != ""'>
+					PRODUCT_CODE = #{productCode},
+				</if>
+				<if test='productName != null and productName != ""'>
+					PRODUCT_NAME = #{productName},
+				</if>
+				<if test='productPrice != null and productPrice != ""'>
+					PRODUCT_PRICE = #{productPrice}
+				</if>
+		WHERE
+				PRODUCT_CODE = #{productCode}
+	
+	</update>
+	
+	
+	
+	
+	
+	
+	
+	
+
+</mapper>
